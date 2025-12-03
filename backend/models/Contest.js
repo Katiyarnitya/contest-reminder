@@ -11,7 +11,7 @@ const contestSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    slung: {
+    slug: {
       //unique and they help you update contest data when API changes
       type: String,
       required: true,
@@ -35,4 +35,4 @@ const contestSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-export const Contest = mongoose.model("Contest", constestSchema);
+export const Contest = mongoose.model("Contest", contestSchema);
