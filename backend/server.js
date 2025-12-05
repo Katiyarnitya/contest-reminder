@@ -7,6 +7,8 @@ import { updateContestsJob } from "./jobs/contestUpdater.js";
 // import { reminderSenderJob } from "./jobs/reminderSender.js";
 import { Contest } from "./models/Contest.js";
 
+import reminderRoutes from "./routes/reminderRoutes.js";
+
 dotenv.config();
 const app = express();
 app.use(express.json());
@@ -23,13 +25,13 @@ cron.schedule("0,30, * * * *", async () => {
   }
 });
 
-// cron.schedule("* * * * *", async () => {
-//   try {
-//     await reminderSenderJob();
-//   } catch (e) {
-//     console.error("Scheduled reminder job failed:", e.message);
-//   }
-// });
+cron.schedule("* * * * *", async () => {
+  try {
+    await reminderSenderJob();
+  } catch (e) {
+    console.error("Scheduled reminder job failed:", e.message);
+  }
+});
 
 // GET /contests - returns organized contests grouped by platform
 // Query params: platform, status, sort=asc|desc, limit
@@ -74,4 +76,5 @@ app.get("/contests", async (req, res) => {
   }
 });
 
+app.use("/api/reminders", reminderRoutes);
 app.listen(5000, () => console.log(`Server listening on 5000`));

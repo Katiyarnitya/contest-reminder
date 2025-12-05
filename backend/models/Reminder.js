@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { transporter } from "../utils/email";
 
 const reminderSchema = new mongoose.Schema(
   {
@@ -7,7 +8,7 @@ const reminderSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    constest: {
+    contest: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Contest",
       required: true,
