@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import cron from "node-cron";
+import cron from "node-cron";
 import { connectDb } from "./config/db.js";
 import { updateContestsJob } from "./jobs/contestUpdater.js";
 // import { reminderSenderJob } from "./jobs/reminderSender.js";
@@ -10,6 +11,10 @@ import { sendEmail } from "./services/GmailServices.js";
 import { checkContestReminders } from "./jobs/reminderSender.js";
 
 dotenv.config();
+const app = express();
+app.use(express.json());
+app.use(cors());
+
 const app = express();
 app.use(express.json());
 app.use(cors());

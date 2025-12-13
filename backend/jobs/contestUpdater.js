@@ -2,6 +2,7 @@ import { axiosClient } from '../utils/axiosClient.js';
 import { Contest } from '../models/Contest.js';
 
 // -- LeetCode
+// -- LeetCode
 const fetchLeetCodeContests = async () => {
   try {
     const query = `query { allContests { title titleSlug startTime duration } }`;
@@ -48,6 +49,7 @@ const fetchCodeforcesContests = async () => {
 };
 
 // -- CodeChef
+// -- CodeChef
 const fetchCodechefContests = async () => {
   try {
     const res = await axiosClient.get('https://www.codechef.com/api/list/contests/all');
@@ -82,6 +84,7 @@ const fetchCodechefContests = async () => {
 };
 
 // Main job
+// Main job
 export const updateContestsJob = async () => {
   console.log('Running contest updater job...');
   const platforms = [
@@ -93,6 +96,7 @@ export const updateContestsJob = async () => {
 
   try {
     for (const platform of platforms) {
+      console.log(`Fetching ${platform.name}...`);
       console.log(`Fetching ${platform.name}...`);
       const contests = await platform.fetchFunction();
       console.log(`${platform.name} fetched:`, contests.length);
