@@ -3,11 +3,7 @@ import bcrypt from "bcrypt";
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    name: { type: String, required: true, trim: true },
     email: {
       type: String,
       required: true,
@@ -15,23 +11,22 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-    password: {
-      type: String,
-      required: true,
-    },
+    password: { type: String, required: true },
   },
-  { timestamps: true } //saves you from manually adding and updating createdAt & updatedAt.
+  { timestamps: true }
 );
 
-//Hashing the password
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  const salt = await bcrypt.genSalt(10);
-  this.password = bcrypt(this.password, hash);
-  nect();
+  try {
+    if (!this.isModified("password")) return next();
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    return next();
+  } catch (err) {
+    return next(err);
+  }
 });
 
-// match the password
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

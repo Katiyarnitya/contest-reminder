@@ -1,19 +1,29 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
+
 
 const reminderSchema = new mongoose.Schema(
   {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+    user: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'User', 
+      required: true 
     },
-    constest: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Contest",
-      required: true,
+    contest: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'Contest', 
+      required: true 
     },
-    reminderTime: { type: Date, required: true },
-    sent: { type: Boolean, default: false },
+    reminderTime: { 
+      type: Date, 
+      required: true 
+    },
+    sent: { 
+      type: Boolean, 
+      default: false 
+    },
   },
   { timestamps: true }
 );
+
+
+export const Reminder = mongoose.model('Reminder', reminderSchema);

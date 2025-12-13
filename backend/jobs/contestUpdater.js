@@ -1,117 +1,132 @@
-import axios from "axios";
-import { Contest } from "../models/Contest.js";
+import { axiosClient } from '../utils/axiosClient.js';
+import { Contest } from '../models/Contest.js';
 
-// leetcode contest fetching
+// -- LeetCode
 const fetchLeetCodeContests = async () => {
   try {
-    const response = await axios.post("https://leetcode.com/graphql", {
-      query: `
-          query {
-            allContests {
-              title
-              titleSlug
-              startTime
-              duration
-            }
-          }
-        `,
-    });
-    return response.data.data.allContests.map((c) => ({
-      //  Array of contest objects
-      name: c.title,
-      slug: c.titleSlug,
-      startTime: new Date(c.startTime * 1000),
-      endTime: new Date((c.startTime + c.duration) * 1000),
-      url: `https://leetcode.com/contest/${c.titleSlug}`,
-    }));
-  } catch (error) {
-    console.error("Error fetching LeetCode contests:", error.message);
+    const query = `query { allContests { title titleSlug startTime duration } }`;
+    const res = await axiosClient.post('https://leetcode.com/graphql', { query });
+    const all = res?.data?.data?.allContests || [];
+    const now = Date.now() / 1000;
+    const twoWeeksFromNow = now + (14 * 24 * 60 * 60); // 2 weeks ahead
+    // Filter: upcoming contests within next 2 weeks
+    return all
+      .filter((c) => c.startTime > now && c.startTime <= twoWeeksFromNow)
+      .map((c) => ({
+        name: c.title,
+        slug: c.titleSlug,
+        startTime: new Date(c.startTime * 1000),
+        endTime: new Date((c.startTime + (c.duration || 0)) * 1000),
+        url: `https://leetcode.com/contest/${c.titleSlug}`,
+      }));
+  } catch (err) {
+    console.warn('LeetCode fetch failed:', err.message);
     return [];
   }
-};
-
-const codeforcesTimeToDate = (seconds) => new Date(seconds * 1000); //Convert Codeforces time (seconds since epoch) to JS Date
-// For codeforces
+};// -- Codeforces
+const codeforcesTimeToDate = (seconds) => new Date(seconds * 1000);
 const fetchCodeforcesContests = async () => {
   try {
-    const response = await axios.get("https://codeforces.com/api/contest.list");
-    const contests = response.data.result;
-
-    return contests.map((c) => ({
-      name: c.name,
-      slug: `cf-${c.id}`,
-      startTime: codeforcesTimeToDate(c.startTimeSeconds),
-      endTime: codeforcesTimeToDate(c.startTimeSeconds + c.durationSeconds),
-      url: `https://codeforces.com/contests/${c.id}`,
-    }));
-  } catch (error) {
-    console.error("Error fetching Codeforces contests:", error.message);
+    const res = await axiosClient.get('https://codeforces.com/api/contest.list');
+    const contests = res?.data?.result || [];
+    const now = Date.now() / 1000;
+    const twoWeeksFromNow = now + (14 * 24 * 60 * 60);
+    // Filter: upcoming contests within next 2 weeks
+    return contests
+      .filter((c) => c.startTimeSeconds && c.startTimeSeconds > now && c.startTimeSeconds <= twoWeeksFromNow)
+      .map((c) => ({
+        name: c.name,
+        slug: `cf-${c.id}`,
+        startTime: codeforcesTimeToDate(c.startTimeSeconds),
+        endTime: codeforcesTimeToDate(c.startTimeSeconds + c.durationSeconds),
+        url: `https://codeforces.com/contest/${c.id}`,
+      }));
+  } catch (err) {
+    console.warn('Codeforces fetch failed:', err.message);
     return [];
   }
 };
 
-//  Fetch CodeChef Contests
+// -- CodeChef
 const fetchCodechefContests = async () => {
   try {
-    const response = await axios.get(
-      "https://www.codechef.com/api/list/contests/all"
-    );
-    const combined = [
-      ...(response.data.future_contests || []),
-      ...(response.data.present_contests || []),
-    ];
-
-    return combined.map((c) => ({
-      name: c.contest_name,
-      slug: `cc-${c.contest_code}`,
-      startTime: new Date(c.start_date),
-      endTime: new Date(c.end_date),
-      url: `https://www.codechef.com/${c.contest_code}`,
-    }));
-  } catch (error) {
-    console.error("Error fetching CodeChef contests:", error.message);
+    const res = await axiosClient.get('https://www.codechef.com/api/list/contests/all');
+    // Only use future_contests (upcoming ones)
+    const combined = res.data.future_contests || [];
+    const parseDate = (d) => {
+      const date = new Date(d);
+      return isNaN(date) ? null : date;
+    };
+    const now = new Date();
+    const twoWeeksFromNow = new Date(now.getTime() + (14 * 24 * 60 * 60 * 1000));
+    return combined
+      .map((c) => {
+        // Use ISO dates from API
+        const start = parseDate(c.contest_start_date_iso);
+        const end = parseDate(c.contest_end_date_iso);
+        // Only include contests within next 2 weeks
+        if (!start || !end || start <= now || start > twoWeeksFromNow) return null;
+        return {
+          name: c.contest_name,
+          slug: `cc-${c.contest_code}`,
+          startTime: start,
+          endTime: end,
+          url: `https://www.codechef.com/${c.contest_code}`,
+        };
+      })
+      .filter(Boolean);
+  } catch (err) {
+    console.warn('CodeChef fetch failed:', err.message);
     return [];
   }
 };
 
-//  Main Cron Job: Update DB
-
+// Main job
 export const updateContestsJob = async () => {
-  console.log("Running contest updater job...");
-
+  console.log('Running contest updater job...');
   const platforms = [
-    { name: "LeetCode", fetchFunction: fetchLeetCodeContests },
-    { name: "CodeChef", fetchFunction: fetchCodechefContests },
-    { name: "Codeforces", fetchFunction: fetchCodeforcesContests },
+    { name: 'LeetCode', fetchFunction: fetchLeetCodeContests },
+    { name: 'CodeChef', fetchFunction: fetchCodechefContests },
+    { name: 'Codeforces', fetchFunction: fetchCodeforcesContests },
   ];
+
+
   try {
     for (const platform of platforms) {
-      console.log(`Fetching ${platform.name} contests...`);
+      console.log(`Fetching ${platform.name}...`);
       const contests = await platform.fetchFunction();
       console.log(`${platform.name} fetched:`, contests.length);
-      for (const c of contests) {
-        await Contest.updateOne(
+
+
+      // Upsert in parallel but bounded — use Promise.allSettled to avoid failing whole job
+      const upsertPromises = contests.map((c) =>
+        Contest.updateOne(
           { slug: c.slug },
           {
             name: c.name,
             platform: platform.name,
             startTime: c.startTime,
             endTime: c.endTime,
-            status: c.startTime > new Date() ? "upcoming" : "finished",
+            // running when now between start and end
+            status: c.startTime > new Date() ? 'upcoming' : c.endTime > new Date() ? 'running' : 'finished',
             url: c.url,
             slug: c.slug,
           },
-          { upsert: true } //(If found → update, If not found → insert new)
-        );
-      }
+          { upsert: true }
+        )
+      );
+
+
+      await Promise.allSettled(upsertPromises);
     }
-    await Contest.updateMany(
-      // Mark the status of all the contest as "finished" which are ended
-      { endTime: { $lt: new Date() } },
-      { status: "finished" }
-    );
-    console.log("Contest updater job completed successfully.");
+
+
+    // Mark finished contests
+    await Contest.updateMany({ endTime: { $lt: new Date() } }, { status: 'finished' });
+
+
+    console.log('Contest updater job completed successfully.');
   } catch (err) {
-    console.error("Error in contest updater job:", err.message);
+    console.error('Error in contest updater job:', err.message);
   }
 };
