@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { transporter } from "../utils/email";
 
 const reminderSchema = new mongoose.Schema(
   {
@@ -13,8 +12,16 @@ const reminderSchema = new mongoose.Schema(
       ref: "Contest",
       required: true,
     },
-    reminderTime: { type: Date, required: true },
-    sent: { type: Boolean, default: false },
+    reminderTime: {
+      type: Date,
+      required: true,
+    },
+    sent: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
+
+export const Reminder = mongoose.model("Reminder", reminderSchema);

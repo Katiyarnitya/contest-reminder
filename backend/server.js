@@ -6,8 +6,8 @@ import { connectDb } from "./config/db.js";
 import { updateContestsJob } from "./jobs/contestUpdater.js";
 // import { reminderSenderJob } from "./jobs/reminderSender.js";
 import { Contest } from "./models/Contest.js";
-
-import reminderRoutes from "./routes/reminderRoutes.js";
+import { sendEmail } from "./services/GmailServices.js";
+import { checkContestReminders } from "./jobs/reminderSender.js";
 
 dotenv.config();
 const app = express();
@@ -17,7 +17,7 @@ app.use(cors());
 connectDb();
 
 // Cron: every 30 minutes for contests, every minute for reminders (adjust as needed)
-cron.schedule("0,30, * * * *", async () => {
+cron.schedule("*/30 * * * *", async () => {
   try {
     await updateContestsJob();
   } catch (e) {
@@ -27,7 +27,9 @@ cron.schedule("0,30, * * * *", async () => {
 
 cron.schedule("* * * * *", async () => {
   try {
-    await reminderSenderJob();
+    console.log("Running reminder check job...");
+    await checkContestReminders();
+    console.log("Done");
   } catch (e) {
     console.error("Scheduled reminder job failed:", e.message);
   }
@@ -38,7 +40,8 @@ cron.schedule("* * * * *", async () => {
 app.get("/contests", async (req, res) => {
   console.log("Job running");
   try {
-    const { platform, status, sort = "asc", limit } = req.query;
+    const { platform, status = "upcoming", sort = "asc", limit } = req.query;
+    console.log(req.query);
     const filter = {};
     if (platform) filter.platform = platform;
     if (status) filter.status = status;
@@ -76,5 +79,21 @@ app.get("/contests", async (req, res) => {
   }
 });
 
-app.use("/api/reminders", reminderRoutes);
-app.listen(5000, () => console.log(`Server listening on 5000`));
+app.get("/test", async (req, res) => {
+  try {
+    await sendEmail(
+      "dangiritik.4321@gmail.com",
+      "Backend Class",
+      "Testing........",
+    );
+
+    res.send("Email sent");
+  } catch (error) {
+    console.error("Failed : ", error.message);
+  }
+});
+
+app.listen(5000, () => {
+  console.log(`Server listening on 5000`);
+  // checkContestReminders();
+});

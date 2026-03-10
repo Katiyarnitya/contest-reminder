@@ -20,15 +20,15 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true } //saves you from manually adding and updating createdAt & updatedAt.
+  { timestamps: true }, //saves you from manually adding and updating createdAt & updatedAt.
 );
 
 //Hashing the password
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   const salt = await bcrypt.genSalt(10);
-  this.password = bcrypt(this.password, hash);
-  nect();
+  this.password = bcrypt.hash(this.password, hash);
+  next();
 });
 
 // match the password
